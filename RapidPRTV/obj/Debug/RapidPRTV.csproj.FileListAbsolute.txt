@@ -152,3 +152,4 @@ C:\Users\Arif\Documents\Visual Studio 2013\Projects\rapidprtv_web\RapidPRTV\obj\
 C:\Users\Arif\Documents\Visual Studio 2013\Projects\rapidprtv_web\RapidPRTV\obj\Debug\RapidPRTV.csproj.GenerateResource.Cache
 C:\Users\Arif\Documents\Visual Studio 2013\Projects\rapidprtv_web\RapidPRTV\obj\Debug\RapidPRTV.dll
 C:\Users\Arif\Documents\Visual Studio 2013\Projects\rapidprtv_web\RapidPRTV\obj\Debug\RapidPRTV.pdb
+C:\Users\Arif\Documents\Visual Studio 2013\Projects\rapidprtv_web\RapidPRTV\obj\Debug\RapidPRTV.csprojResolveAssemblyReference.cache

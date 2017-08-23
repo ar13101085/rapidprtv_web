@@ -280,6 +280,11 @@
     <Content Include="Pinegrow\fonts\glyphicons-halflings-regular.ttf" />
     <Content Include="Pinegrow\fonts\glyphicons-halflings-regular.woff" />
     <Content Include="Pinegrow\fonts\glyphicons-halflings-regular.woff2" />
+    <Content Include="youtube_content\auth.js" />
+    <Content Include="youtube_content\cors_upload.js" />
+    <Content Include="youtube_content\moment.js" />
+    <Content Include="youtube_content\upload_video.css" />
+    <Content Include="youtube_content\upload_video.js" />
     <None Include="job_scheduling_data_2_0.xsd">
       <SubType>Designer</SubType>
     </None>
@@ -323,6 +328,7 @@
     <Content Include="Views\Home\Advertise.cshtml" />
     <Content Include="Views\Shared\_Modal.cshtml" />
     <Content Include="Views\Home\Video_New.cshtml" />
+    <Content Include="Views\Home\UploadYoutube.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Advertise\" />

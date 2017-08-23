@@ -178,6 +178,8 @@ namespace RapidPRTV.Controllers
                 v.NowPublish = true;
                 Db.SaveChanges();
             }
+
+            TvHub.AddPlayList();
             return View("Video");
             
             
@@ -379,7 +381,7 @@ namespace RapidPRTV.Controllers
                 Db.SaveChanges();
             }
 
-
+            TvHub.AddText();
             return View("Text");
         }
 
@@ -418,6 +420,14 @@ namespace RapidPRTV.Controllers
                 boxName = advertise.BoxName
             });
             return s;
+        }
+
+
+        public ActionResult UploadYoutube()
+        {
+            ViewBag.msg = "Upload youtube";
+            ViewBag.Title = "Upload youtube";
+            return View();
         }
     }
 }

@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web;
 using Common.Logging.Simple;
 using Microsoft.AspNet.SignalR;
@@ -16,10 +18,144 @@ namespace RapidPRTV.Hubs
     public class TvHub : Hub
     {
         private static readonly IHubContext hubContext = GlobalHost.ConnectionManager.GetHubContext<TvHub>();
-
+        public static int POSITION_TEXT = 0;
         public void Hello()
         {
             Clients.All.hello("Hello Arif");
+        }
+
+
+        public static void AddText()
+        {
+            ApplicationDbContext Db = new ApplicationDbContext();
+            var allText = Db.Texts.Where(x => x.IsPublishNow).OrderBy(y => y.TextPublishTime).ToList();
+
+            if (POSITION_TEXT >= allText.Count())
+            {
+                POSITION_TEXT = 0;
+            }
+            hubContext.Clients.All.Text(allText[POSITION_TEXT].TextContent);
+            //TvHub.SetText(allText[TextTaskSchedule.POSITION_TEXT].TextContent);
+            POSITION_TEXT++;
+
+        }
+        public static void AddPlayList()
+        {
+            ApplicationDbContext Db = new ApplicationDbContext();
+            var allPublishVideo =
+                        Db.Videos.Where(x => x.NowPublish)
+                            .OrderBy(y => y.VideoUploadTime)
+                            .ToList();
+            if (!allPublishVideo.Any())
+            {
+                return;
+            }
+
+
+            var res = Path.GetExtension(allPublishVideo[VideoPlay.POSITION_VIDEO].VideoName);
+            var millisecondPlay =
+                (int)(DateTime.Now - allPublishVideo[VideoPlay.POSITION_VIDEO].VideoPublishTime).TotalMilliseconds;
+
+            ArrayList listVideoAddress = new ArrayList();
+            foreach (var a in allPublishVideo)
+            {
+                listVideoAddress.Add(a.VideoLiveLink);
+            }
+            var data = JsonConvert.SerializeObject(new
+            {
+                address = listVideoAddress,
+                play = new
+                {
+                    idx = VideoPlay.POSITION_VIDEO,
+                    skiptime = millisecondPlay
+                }
+            });
+            hubContext.Clients.All.playlist(data);
+        }
+        
+        
+        public static void AddPlayListControll()
+        {
+            ApplicationDbContext Db = new ApplicationDbContext();
+            var allPublishVideo =
+                        Db.Videos.Where(x => x.NowPublish)
+                            .OrderBy(y => y.VideoUploadTime)
+                            .ToList();
+            if (!allPublishVideo.Any())
+            {
+                return;
+            }
+
+
+            var res = Path.GetExtension(allPublishVideo[VideoPlay.POSITION_VIDEO].VideoName);
+            var millisecondPlay =
+                (int)(DateTime.Now - allPublishVideo[VideoPlay.POSITION_VIDEO].VideoPublishTime).TotalMilliseconds;
+
+            ArrayList listVideoAddress = new ArrayList();
+            foreach (var a in allPublishVideo)
+            {
+                listVideoAddress.Add(a.VideoLiveLink);
+            }
+            var data = JsonConvert.SerializeObject(new
+            {
+                address = listVideoAddress,
+                play = new
+                {
+                    idx = VideoPlay.POSITION_VIDEO,
+                    skiptime = millisecondPlay
+                }
+            });
+            hubContext.Clients.All.RealTime(data);
+        }
+
+        public void LoadPlayList()
+        {
+            ApplicationDbContext Db = new ApplicationDbContext();
+            var allPublishVideo =
+                        Db.Videos.Where(x => x.NowPublish)
+                            .OrderBy(y => y.VideoUploadTime)
+                            .ToList();
+            if (!allPublishVideo.Any())
+            {
+                return;
+            }
+
+
+            var res = Path.GetExtension(allPublishVideo[VideoPlay.POSITION_VIDEO].VideoName);
+            var millisecondPlay =
+                (int)(DateTime.Now - allPublishVideo[VideoPlay.POSITION_VIDEO].VideoPublishTime).TotalMilliseconds;
+
+            ArrayList listVideoAddress=new ArrayList();
+            foreach (var a in allPublishVideo)
+            {
+                listVideoAddress.Add(a.VideoLiveLink);
+            }
+            var data = JsonConvert.SerializeObject(new
+            {
+                address =listVideoAddress,
+                play = new
+                {
+                    idx=VideoPlay.POSITION_VIDEO,
+                    skiptime = millisecondPlay
+                }
+            });
+            //hubContext.Clients.All.playlist(data);
+            Clients.Caller.playlist(data);
+        }
+
+        public void LoadText()
+        {
+            ApplicationDbContext Db = new ApplicationDbContext();
+            var allText = Db.Texts.Where(x => x.IsPublishNow).OrderBy(y => y.TextPublishTime).ToList();
+
+            if (POSITION_TEXT >= allText.Count())
+            {
+                POSITION_TEXT = 0;
+            }
+            Clients.Caller.Text(allText[POSITION_TEXT].TextContent);
+            //TvHub.SetText(allText[TextTaskSchedule.POSITION_TEXT].TextContent);
+            POSITION_TEXT++;
+            
         }
 
         public static void HelloTest()
@@ -68,15 +204,19 @@ namespace RapidPRTV.Hubs
             });
             return s;
         }
-    }
 
+        
+    }
+    [DisallowConcurrentExecution]
     public class VideoPlay : IJob
     {
         public static int POSITION_VIDEO;
         public ApplicationDbContext Db = new ApplicationDbContext();
+        //public static DateTime ActiveDateTime;
 
         public void Execute(IJobExecutionContext context)
         {
+            //ActiveDateTime = DateTime.Now;
             try
             {
                 var allPublishVideo =
@@ -87,9 +227,10 @@ namespace RapidPRTV.Hubs
                 {
                     return;
                 }
-
+                int pos = POSITION_VIDEO;
                 if (POSITION_VIDEO >= allPublishVideo.Count())
                 {
+                    
                     POSITION_VIDEO = 0;
                 }
 
@@ -98,22 +239,31 @@ namespace RapidPRTV.Hubs
                 allPublishVideo[POSITION_VIDEO].VideoPublishTime = DateTime.Now;
                 Db.SaveChanges();
 
-                TvHub.VideoLive(JsonConvert.SerializeObject(new
+                /*TvHub.VideoLive(JsonConvert.SerializeObject(new
                 {
                     address = allPublishVideo[POSITION_VIDEO].VideoLiveLink,
-                    seek_position = 0
-                }));
+                    seek_position = 0,
+                    type = "control_playlist",
+                    current_time = DateTime.Now.ToString("HH:mm:ss tt"),
+                    POSITION_VIDEO,
+                    count = allPublishVideo.Count,
+                    pos
+                }));*/
 
                 Debug.WriteLine(JsonConvert.SerializeObject(new
                 {
                     address = allPublishVideo[POSITION_VIDEO].VideoLiveLink,
-                    seek_position = 0
+                    seek_position = 0,
+                    type = "control_playlist",
+                    current_time = DateTime.Now.ToString("HH:mm:ss tt")
                 }));
 
                 context.Scheduler.PauseTrigger(context.Trigger.Key);
-                Thread.Sleep((Convert.ToInt32(allPublishVideo[POSITION_VIDEO].VideoDuration) * 1000) + (2 * 1000));
+                Thread.Sleep((Convert.ToInt32(allPublishVideo[POSITION_VIDEO].VideoDuration) * 1000) + (1 * 1000));
                 context.Scheduler.ResumeTrigger(context.Trigger.Key);
-                POSITION_VIDEO++;
+                /*if ((DateTime.Now-ActiveDateTime).TotalSeconds<5)
+                    return;*/
+                POSITION_VIDEO = POSITION_VIDEO+1;
             }
             catch (Exception e)
             {
@@ -123,10 +273,11 @@ namespace RapidPRTV.Hubs
         }
 
         public static void VideoPlayListControl()
-        {
+        {  
             var schedulerVideoPlay = StdSchedulerFactory.GetDefaultScheduler();
+            schedulerVideoPlay.Start();
             var job1 = JobBuilder.Create<VideoPlay>()
-                .UsingJobData("Video", "v")
+                //.UsingJobData("Video", "v")
                 .Build();
             var trigger1 = TriggerBuilder.Create()
                 .WithIdentity("video", "group19")
@@ -140,15 +291,18 @@ namespace RapidPRTV.Hubs
         }
     }
 
-
+    [DisallowConcurrentExecution]
     public class LiveControl : IJob
     {
         public ApplicationDbContext Db = new ApplicationDbContext();
-
+        //public DateTime ActiveDateTime=DateTime.Now;
+        
         public void Execute(IJobExecutionContext context)
         {
-            try
+            TvHub.AddPlayListControll();
+            /*try
             {
+               
                 var allPublishVideo =
                         Db.Videos.Where(x => x.NowPublish)
                             .OrderBy(y => y.VideoUploadTime)
@@ -160,18 +314,19 @@ namespace RapidPRTV.Hubs
 
 
                 var res = Path.GetExtension(allPublishVideo[VideoPlay.POSITION_VIDEO].VideoName);
-                /*var uploadFilesDir = HttpContext.Current.Server.MapPath("~/Video");
-                if (!Directory.Exists(uploadFilesDir))
-                {
-                    Directory.CreateDirectory(uploadFilesDir);
-                }*/
+               
                 var millisecondPlay =
                     (int)(DateTime.Now - allPublishVideo[VideoPlay.POSITION_VIDEO].VideoPublishTime).TotalMilliseconds;
 
                 TvHub.VideoLive(JsonConvert.SerializeObject(new
                 {
                     address = allPublishVideo[VideoPlay.POSITION_VIDEO].VideoLiveLink,
-                    seek_position = millisecondPlay
+                    seek_position = millisecondPlay,
+                    type="control_live",
+                    current_time=DateTime.Now.ToString("HH:mm:ss tt"),
+                    //VideoPlay.POSITION_VIDEO,
+                    count = allPublishVideo.Count,
+                    //prev_thread = /*(int)(DateTime.Now - ActiveDateTime).TotalMilliseconds#1#ActiveDateTime.ToString("HH:mm:ss tt")
                 }));
 
                 Debug.WriteLine(JsonConvert.SerializeObject(new
@@ -180,28 +335,31 @@ namespace RapidPRTV.Hubs
                     seek_position = millisecondPlay
                 }));
 
-                context.Scheduler.PauseTrigger(context.Trigger.Key);
+                //ActiveDateTime = DateTime.Now;
+
+               /* context.Scheduler.PauseTrigger(context.Trigger.Key);
                 Thread.Sleep(5 * 1000);
-                context.Scheduler.ResumeTrigger(context.Trigger.Key);
+                context.Scheduler.ResumeTrigger(context.Trigger.Key);#1#
+                
+                
             }
             catch (Exception e)
             {
 
                 Debug.WriteLine("LiveControl  "+e.ToString());
-            }
+            }*/
         }
 
         public static void ControlLive()
         {
             var schedulerVideoPlay = StdSchedulerFactory.GetDefaultScheduler();
             var job1 = JobBuilder.Create<LiveControl>()
-                .UsingJobData("live", "video")
                 .Build();
             var trigger1 = TriggerBuilder.Create()
                 .WithIdentity("video", "group7")
                 .StartNow()
                 .WithSimpleSchedule(s => s
-                    .WithIntervalInSeconds(1)
+                    .WithIntervalInSeconds(60)
                     .RepeatForever()
                 )
                 .Build();
@@ -210,7 +368,7 @@ namespace RapidPRTV.Hubs
     }
 
 
-    public class TextTaskSchedule : IJob
+    /*public class TextTaskSchedule : IJob
     {
         public static int POSITION_TEXT;
         public static int TIME_PREVIEW_TEXT = 5;
@@ -227,57 +385,7 @@ namespace RapidPRTV.Hubs
             TvHub.SetText(allText[POSITION_TEXT].TextContent);
             POSITION_TEXT++;
 
-            /*var trigger1 = TriggerBuilder.Create()
-               .WithIdentity("trigger1", "group1")
-               .StartNow()
-               .WithSimpleSchedule(s => s
-                   .WithIntervalInSeconds(GetTime())
-                   .RepeatForever()
-               )
-               .Build();
-
-            context.Scheduler.RescheduleJob(context.Trigger.Key, trigger1);*/
-
-            //Thread.Sleep(TIME_PREVIEW_TEXT*1000);
-
-
-            /*var scheduler = StdSchedulerFactory.GetDefaultScheduler();
-            scheduler.Start();
-            var job = JobBuilder.Create<TextTaskSchedule>().Build();
-            var trigger = TriggerBuilder.Create()
-                //.WithIdentity("trigger10", "group2")
-                .StartNow()
-                .WithSimpleSchedule(s => s
-                    .WithIntervalInSeconds(/*TIME_PREVIEW_TEXT#1#GetTime())
-                    //.RepeatForever()
-                    .WithRepeatCount(0)
-                    )
-                
-
-                .Build();
-            scheduler.ScheduleJob(job, trigger);*/
-            //context.Scheduler.Standby();
-            //Thread.Sleep(10000);
-            //Thread.Sleep(TimeSpan.FromSeconds(10));
-            //context.Scheduler.Start();
-
-            /*var job = JobBuilder.Create<TextTaskSchedule>().Build();
-            var trigger = TriggerBuilder.Create()
-                .WithIdentity("trigger10", "group2")
-                .StartNow()
-                .WithSimpleSchedule(s => s
-                    .WithIntervalInSeconds(GetTime())
-                    .RepeatForever()
-                    )
-                //.WithSchedule()
-
-
-                .Build();
-
-            context.Scheduler.ScheduleJob(job, trigger);
-            context.Scheduler.Start();*/
-            /*context.Scheduler.Standby();
-            context.Scheduler.StartDelayed(TimeSpan.FromSeconds(10));ss*/
+            
         }
 
         public static void Start()
@@ -289,12 +397,12 @@ namespace RapidPRTV.Hubs
                 .WithIdentity("trigger10", "group2")
                 .StartNow()
                 .WithSimpleSchedule(s => s
-                    .WithIntervalInSeconds(/*TIME_PREVIEW_TEXT#1#GetTime())
+                    .WithIntervalInSeconds(/*TIME_PREVIEW_TEXT#2#GetTime())
                     .RepeatForever()
                     )
                 
                 .Build();
-            scheduler.ScheduleJob(job, trigger);*/
+            scheduler.ScheduleJob(job, trigger);#1#
             var scheduler = StdSchedulerFactory.GetDefaultScheduler();
             scheduler.Start();
             var job = JobBuilder.Create<TextTaskSchedule>().Build();
@@ -302,10 +410,10 @@ namespace RapidPRTV.Hubs
                 .WithIdentity("trigger10", "group2")
                 .StartNow()
                 .WithSimpleSchedule(s => s
-                    .WithIntervalInSeconds( /*TIME_PREVIEW_TEXT*/5)
+                    .WithIntervalInSeconds( /*TIME_PREVIEW_TEXT#1#60)
                     .RepeatForever()
                 )
-                //.WithSchedule()
+                .WithSchedule()
                 .Build();
             scheduler.ScheduleJob(job, trigger);
         }
@@ -316,7 +424,7 @@ namespace RapidPRTV.Hubs
             var month = rnd.Next(5, 10);
             return month;
         }
-    }
+    }*/
 
 
     public class Ad1 : IJob
@@ -755,6 +863,9 @@ namespace RapidPRTV.Hubs
     {
         public static void Start()
         {
+
+            Debug.WriteLine("Start advertise call");
+
             var scheduler1 = StdSchedulerFactory.GetDefaultScheduler();
             var job1 = JobBuilder.Create<Ad1>()
                 .UsingJobData("BOX_NAME", "L-1")

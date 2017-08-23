@@ -20,9 +20,10 @@ namespace RapidPRTV
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
 
-            TextTaskSchedule.Start();
-            AdvertiseTaskSchedule.Start();
+            //TextTaskSchedule.Start();
             VideoPlay.VideoPlayListControl();
+            AdvertiseTaskSchedule.Start();
+            
             LiveControl.ControlLive();
 
         }
